@@ -9,31 +9,25 @@ from sklearn.model_selection import train_test_split
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 
 def write_to_csv(index=False):
-    from pathlib import Path
-
-    outpath = Path("./percent_diff.csv")
-    percent_diff.to_csv(outpath, index=index)
-
-    outpath = Path("./actual.csv")
-    y_test.to_csv(outpath, index=index)
-
-    outpath = Path("./predicted.csv")
-    predictions.to_csv(outpath, index=index)
-
+    outpath = Path("./results.csv")
+    results.to_csv(outpath, index=index)
 
 def plot_values():
     # Plot the predicted values against the actual values
     figure, axis = plt.subplots(2, 2)
     figure.set_size_inches(20, 18.5)
-    axis[0, 0].plot(percent_diff, label="Percent Diff")
-    axis[0, 0].legend()
-    axis[0, 1].plot(y_test, label="Actual")
-    axis[0, 1].plot(predictions, label="Predicted")
-    axis[0, 1].legend()
-    axis[1, 0].bar(correct)
+    axis[0,0].plot(results['percent_diff'], label="Percent Diff")
+    axis[0,0].legend()
+    axis[0,1].plot(y_test, label="Actual")
+    axis[0,1].plot(predictions, label="Predicted")
+    axis[0,1].legend()
+    # TODO - check on the order here
+    axis[1,0].bar(["True", "False"], correct_counts, label="Correct Direction")
+    axis[1,0].legend()
     plt.savefig("plt.png", dpi=100)
 
 
@@ -76,10 +70,10 @@ model.add(Dropout(0.2))
 model.add(Dense(1))
 
 # Compile the model
-model.compile(loss="mean_squared_error", optimizer="adam")
+model.compile(loss="mean_absolute_error", optimizer="adam")
 
 # Fit the model to the training data
-model.fit(X_train, y_train, epochs=1, batch_size=1, verbose=1)
+model.fit(X_train, y_train, epochs=100, batch_size=1, verbose=1)
 
 # Evaluate the model on the test data
 score = model.evaluate(X_test, y_test, verbose=0)
@@ -91,13 +85,17 @@ predictions = model.predict(X_test)
 y_test = pd.DataFrame(y_test)
 predictions = pd.DataFrame(predictions)
 
-# print(predictions)
-percent_diff = (y_test - predictions) / y_test
-true_direction = y_test - y_test.shift(1)
-pred_direction = predictions - predictions.shift(1)
-# check if matching sign
-correct = [true_direction * pred_direction >= 0]
-print(correct)
+# make a results df to store analysis
+results = pd.DataFrame()
+results['percent_diff'] = (y_test - predictions) / y_test
+results['true_direction'] = y_test - y_test.shift(1)
+results['pred_direction'] = predictions - predictions.shift(1)
 
-# plot_values()
-# write_to_csv()
+# check if matching sign
+results['correct'] = results['true_direction'] * results['pred_direction'] >= 0
+correct_counts = results.correct.value_counts()
+print(type(correct_counts))
+print(correct_counts)
+
+plot_values()
+write_to_csv()
