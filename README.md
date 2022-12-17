@@ -1,2 +1,2 @@
 # lstm_price
-A simplistic template for LSTM in equitiy pricing
+A simplistic template for LSTM in equity pricing
